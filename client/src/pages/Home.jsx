@@ -6,6 +6,7 @@ import { HiSparkles } from 'react-icons/hi';
 import AuthModel from '../components/AuthModel';
 import { useState } from 'react';
 import { BsRobot, BsMic, BsClock, BsBarChart, BsFileEarmarkText } from 'react-icons/bs';
+import { useNavigate } from 'react-router-dom';
 
 function Home() {
   const {userData} = useSelector((state) => state.user)
@@ -45,7 +46,7 @@ function Home() {
             <div className='flex flex-wrap justify-center gap-4 mt-10'>
               <motion.button
               onClick={()=>{
-                if(userData){
+                if(!userData){
                   setShowAuth(true)
                   return;
                 }
@@ -55,6 +56,21 @@ function Home() {
               whileTap={{opacity:1, scale:0.98}}
               className='bg-black text-white px-10 py-3 rounded-full hover:opacity-90 transition shafow-md'
               > Start Interview
+
+              </motion.button>
+
+              <motion.button
+              onClick={()=>{
+                if(!userData){
+                  setShowAuth(true)
+                  return;
+                }
+                navigate("/history")
+              }}
+              whileHover={{ opacity:0.9, scale:1.03}}
+              whileTap={{opacity:1, scale:0.98}}
+              className='border border-gray-300 px-10 py-3 rounded-full hover:bg-gray-100 transition'
+              > View History
 
               </motion.button>
               
