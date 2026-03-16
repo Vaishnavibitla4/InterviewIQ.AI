@@ -1,33 +1,10 @@
-import fs from "fs"
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs"
+import express from "express";
+import isAuth from "../middlewares/isAuth.js";
+import { upload } from "../middlewares/multer.js";
+import { analyzeResume } from "../controllers/interviewController.js";
 
+const interviewRouter = express.Router();
 
-export const analyzeResume = async (req, res) => {
-    try{
-        if(!req.file){
-            return res.status(400).json({ message: "Resume required" });
+interviewRouter.post("/resume",isAuth,upload.single("resume"),analyzeResume);
 
-        }
-        const filepath = req.file.path
-
-        const fileBuffer = await fs.promises.readFile(filepath)
-        const unit8Array = new Uint8Array(fileBuffer)
-
-        const pdf = await pdfjsLib.getDocument({data:unit8Array}).promise;
-
-        let resumeText = "";
-
-        for(let pageNum = 1; pageNum <= pdf.numPages; pageNum++){
-            const page = await pdf.getPage(pageNum);
-            const content = await page.getTextContent();
-
-            const pageText = content.items.map(item => item.str).join("");
-            resumeText += pageText + "\n";
-        }
-
-        resumeText = resumeText.replace(/\s+/g, " ").trim();
-
-    }catch(error){
-
-    }
-}
+export default interviewRouter;
