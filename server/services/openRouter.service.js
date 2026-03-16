@@ -1,8 +1,8 @@
 import axios from "axios"
 
-export const askAi = async(mesages)=> {
+export const askAi = async(messages)=> {
     try{
-        if (!mesages || !Array.isArray(messages) || messages.length===0){
+        if (!messages || !Array.isArray(messages) || messages.length===0){
             throw new Error("messages array is empty.");
         }
     const response = await axios.post("https://openrouter.ai/api/v1/chat/completions",

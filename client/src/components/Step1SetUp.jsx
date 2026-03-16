@@ -9,6 +9,7 @@ import {
 } from "react-icons/fa";
 import { useState } from 'react';
 import axios from "axios";
+import  { ServerUrl } from "../App.jsx"
 
 function Step1SetUp({onStart}) {
 
@@ -22,6 +23,7 @@ function Step1SetUp({onStart}) {
   const [resumeText, setResumeText] = useState("");
   const [analysisDone, setAnalysisDone] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+
 
 
   const handleUploadResume = async () => {
@@ -41,6 +43,7 @@ function Step1SetUp({onStart}) {
       setAnalyzing(false);
     }catch(error){
       console.log(error)
+      setAnalyzing(false);
     }
   }
   return (
@@ -131,7 +134,7 @@ function Step1SetUp({onStart}) {
                 {!analysisDone && (
                   <motion.div 
                   whileHover={{scale: 1.02}}
-                  onClick={document.getElementById(resumeFile)}
+                  onClick={()=>document.getElementById("resumeUpload").click()}
                   className='border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-green-500 hover:bg-green-50 transition'>
                       <FaFileUpload className='text-4xl mx-auto text-green-600 mb-3'></FaFileUpload>
                       <input 
@@ -153,6 +156,41 @@ function Step1SetUp({onStart}) {
                           </motion.button>
                         )
                       }
+                  </motion.div>
+                )}
+
+                {analysisDone && (
+                  <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className='bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-4'>
+                      <h3 className='text-lg font-semibold text-gray-800'>
+                        Resume Analysis Result
+                      </h3>
+                      {projects.length > 0 && (
+                        <div>
+                          <p className='font-medium text-gray-700 mb-1'> 
+                          Projects:</p>
+                            <ul className='list-disc list-inside text-gray-600 space-y-1'>
+                                {projects.map((p,i)=>(
+                                  <li key={i}>{p}</li>
+                                ))}
+                            </ul>
+                        </div>
+                      )}
+
+                      {skills.length > 0 && (
+                        <div>
+                          <p className='font-medium text-gray-700 mb-1'> 
+                          Skills:</p>
+                            <div className='flex flex-wrap gap-2'>
+                                {skills.map((s,i)=>(
+                                  <span key={i} className='bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm'>{s}</span>
+                                ))}
+                            </div>
+                        </div>
+                      )}
+
                   </motion.div>
                 )}
 

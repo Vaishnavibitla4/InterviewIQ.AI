@@ -22,7 +22,7 @@ export const analyzeResume = async (req, res) => {
             const page = await pdf.getPage(pageNum);
             const content = await page.getTextContent();
 
-            const pageText = content.items.map(item => item.str).join("");
+            const pageText = content.items.map(item => item.str).join(" ");
             resumeText += pageText + "\n";
         }
 
@@ -47,7 +47,12 @@ export const analyzeResume = async (req, res) => {
         ];
 
         const aiResponse = await askAi(messages)
+        console.log("AI RESPONSE:", aiResponse);
+        // clean markdown formatting from AI
+        let cleaned = aiResponse.trim();
+        cleaned = cleaned.replace(/```json/g, "").replace(/```/g, "");
         const parsed = JSON.parse(aiResponse);
+
 
         fs.unlinkSync(filepath)
         res.json({
