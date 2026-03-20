@@ -54,7 +54,7 @@ export const analyzeResume = async (req, res) => {
         // clean markdown formatting from AI
         let cleaned = aiResponse.trim();
         cleaned = cleaned.replace(/```json/g, "").replace(/```/g, "");
-        const parsed = JSON.parse(aiResponse);
+        const parsed = JSON.parse(cleaned);
 
 
         fs.unlinkSync(filepath)
@@ -79,6 +79,7 @@ export const analyzeResume = async (req, res) => {
 };
 
 export const generateQuestion = async (req, res) => {
+    console.log("REQ BODY:", req.body);
     try{
         let {role, experience, mode, resumeText, projects, skills}= req.body
         role = role?.trim();
@@ -215,7 +216,7 @@ export const submitAnswer = async (req,res) => {
     try{
         const {interviewId, questionIndex, answer, timeTaken} = req.body
 
-        const interview = await interview.findById(interviewId)
+        const interview = await Interview.findById(interviewId)
         const question = interview.questions[questionIndex]
 
         if(!answer) {

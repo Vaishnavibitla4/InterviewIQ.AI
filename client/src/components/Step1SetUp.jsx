@@ -67,6 +67,7 @@ function Step1SetUp({onStart}) {
       onStart(result.data)
 
     }catch(error){
+      console.log("BACKEND MESSAGE:", error.response?.data);
       setLoading(false)
     }
   }
