@@ -6,7 +6,7 @@ import { motion } from 'motion/react'
 import { FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
 import axios from "axios"
 import  { ServerUrl } from "../App.jsx"
-import { BsArrowLeft } from 'react-icons/bs';
+import { BsArrowLeft, BsArrowRight } from 'react-icons/bs';
 
 
 function Step2Interview({interviewData, onFinish}) {
@@ -156,7 +156,7 @@ function Step2Interview({interviewData, onFinish}) {
   useEffect(() => {
     if(isIntroPhase)return;
     if(!currentQuestion)return;
-    if(isSubmitting) return;
+    
     const timer = setInterval(() => {
         setTimeLeft((prev) =>{
           if(prev <= 1){
@@ -168,7 +168,13 @@ function Step2Interview({interviewData, onFinish}) {
     }, 1000);
 
     return ()=> clearInterval(timer)
-  }, [isIntroPhase, currentIndex, isSubmitting])
+  }, [isIntroPhase, currentIndex])
+
+  useEffect(()=> {
+    if(!isIntroPhase && currentQuestion) {
+      setTimeLeft(currentQuestion.timeLimit || 60);
+    }
+  }, [currentIndex]);
 
   useEffect(() => {
     if(!("webkitSpeechRecognition" in window)) return;
@@ -232,8 +238,52 @@ function Step2Interview({interviewData, onFinish}) {
     }
   }
 
-  const handleNext = async ()
- 
+  const handleNext = async () => {
+    setAnswer("");
+    setFeedback("");
+    if(currentIndex + 1 >= questions.length) {
+      finishInterview();
+      return;
+    }
+
+    await speakText("Alright, let's move to the next question.");
+
+    setCurrentIndex(currentIndex + 1);
+    setTimeout(() => {
+      if(isMicOn) startMic();
+    }, 500);
+  }
+
+  const finishInterview = async (params) => {
+    stopMic()
+    setIsMicOn(false)
+    try{
+      const result = await axios.post(ServerUrl + "/api/interview/finish", {interviewId}, {withCredentials:true})
+      console.log(result.data)
+      onFinish(result.data)
+    } catch(error) {
+      console.log(error)
+    }
+  }
+  
+  useEffect(() => {
+    if(isIntroPhase) return;
+    if(!currentQuestion) return;
+    if(timeLeft === 0 && !isSubmitting && !feedback){
+      handleSubmit();
+    }
+  }, [timeLeft]);
+
+  useEffect(() =>{
+    return () => {
+      if(recognitionRef.current){
+        recognitionRef.current.stop();
+        recognitionRef.current.abort();
+      }
+      window.speechSynthesis.cancel();
+    };
+  }, []);
+
   return (
     <div className='min-h-screen bg-linear-to-br from-emerald-50 via-white to-teal-100 flex items-center justify-center p-4 sm:p-6'>
       <div className='w-full max-w-350 min-h-[80vh] bg-white rounded-3xl shadow-2xl border border-gray-200 flex flex-col lg:flex-row overflow-hidden'>
@@ -310,11 +360,10 @@ function Step2Interview({interviewData, onFinish}) {
           { !feedback ? (<div className='flex flex-center gap-4 mt-6'>
             <motion.button
             onClick={toggleMic}
-            whileTap={{scale:0.9}}
+            whileTap={{ scale:0.9 }}
             className='w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black text-white shadow-lg'
             >
-              <FaMicrophone size={20}></FaMicrophone>
-
+              { isMicOn ? <FaMicrophone size={20}></FaMicrophone> : <FaMicrophoneSlash size={20}></FaMicrophoneSlash> }
             </motion.button>
             <motion.button 
             onClick={submitAnswer}
@@ -330,8 +379,10 @@ function Step2Interview({interviewData, onFinish}) {
 
             className='mt-6 bg-emerald-50 border border-emerald-200 p-5 rounded-2xl shadow-sm'>
             <p className='text-emerald-700 font-medium mb-4'>{feedback}</p>
-            <button className='w-full bg-gradient-to-r from-emerald-600 to-teal-500 text-white py-3 rounded-xl shadow-md hover:opacity-90 transition flex items-center justify-center gap-1'>
-              Next Question<BsArrowLeft size={18}></BsArrowLeft>
+            <button 
+            onClick={handleNext}
+            className='w-full bg-gradient-to-r from-emerald-600 to-teal-500 text-white py-3 rounded-xl shadow-md hover:opacity-90 transition flex items-center justify-center gap-1'>
+              Next Question<BsArrowRight size={18}></BsArrowRight>
             </button>
             </motion.div>
           )}
