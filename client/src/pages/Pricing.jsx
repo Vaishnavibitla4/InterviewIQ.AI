@@ -1,6 +1,6 @@
 import React from 'react'
 
-function InterviewReport() {
+function Pricing() {
   return (
     <div>
       
@@ -8,4 +8,5 @@ function InterviewReport() {
   )
 }
 
-export default InterviewReport
+export default Pricing
+

@@ -270,7 +270,7 @@ function Step2Interview({interviewData, onFinish}) {
     if(isIntroPhase) return;
     if(!currentQuestion) return;
     if(timeLeft === 0 && !isSubmitting && !feedback){
-      handleSubmit();
+      submitAnswer();
     }
   }, [timeLeft]);
 
