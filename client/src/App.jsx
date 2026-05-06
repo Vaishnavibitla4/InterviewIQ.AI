@@ -9,7 +9,9 @@ import InterviewPage from './pages/InterviewPage'
 import InterviewHistory from './pages/InterviewHistory'
 import Pricing from './pages/Pricing'
 import InterviewReport from './pages/InterviewReport'
-export const ServerUrl = "http://localhost:8000"
+
+
+export const ServerUrl = "https://interviewiq-ai-dn2p.onrender.com"
 
 function App() {
 
