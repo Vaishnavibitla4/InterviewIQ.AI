@@ -14,7 +14,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://interviewiq-ai-1client.onrender.com",
     credentials: true
   })
 )
