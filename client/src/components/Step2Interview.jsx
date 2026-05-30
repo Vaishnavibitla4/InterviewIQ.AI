@@ -24,6 +24,7 @@ function Step2Interview({interviewData, onFinish}) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voiceGender, setVoiceGender] = useState("female");
   const [subtitle, setSubtitle] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
 
 
   const videoRef = useRef(null);
@@ -176,34 +177,113 @@ function Step2Interview({interviewData, onFinish}) {
     }
   }, [currentIndex]);
 
-  useEffect(() => {
-    if(!("webkitSpeechRecognition" in window)) return;
+  // Tracks whether recognition is currently running to avoid double-start errors
+  const isRecognizingRef = useRef(false);
+  // Tracks whether we *want* the mic to keep running (so onend can auto-restart)
+  const shouldListenRef = useRef(false);
 
-    const recognition = new window.webkitSpeechRecognition();
-    recognition.lang = "en-us";
+  const buildRecognition = () => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return null;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
     recognition.continuous = true;
-    recognition.interimResults = false;
+    // Show interim (in-progress) results so the textarea fills as you speak
+    recognition.interimResults = true;
 
-    recognition.onresult = (event) => {
-      const transcript = 
-        event.results[event.results.length - 1][0].transcript;
-      setAnswer((prev) => prev + " " + transcript);
+    recognition.onstart = () => {
+      isRecognizingRef.current = true;
     };
 
-    recognitionRef.current = recognition;
+    recognition.onresult = (event) => {
+      let interim = "";
+      let finalTranscript = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript;
+        } else {
+          interim += result[0].transcript;
+        }
+      }
+
+      // Append confirmed words; show interim text inline
+      if (finalTranscript) {
+        setAnswer((prev) => {
+          const trimmed = prev.trimEnd();
+          return trimmed ? trimmed + " " + finalTranscript : finalTranscript;
+        });
+        setInterimTranscript("");
+      } else if (interim) {
+        setInterimTranscript(interim);
+      }
+    };
+
+    recognition.onerror = (event) => {
+      // "no-speech" is benign — auto-restart below handles it
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        console.error("Microphone permission denied:", event.error);
+        setIsMicOn(false);
+        shouldListenRef.current = false;
+      }
+      isRecognizingRef.current = false;
+    };
+
+    recognition.onend = () => {
+      isRecognizingRef.current = false;
+      setInterimTranscript("");
+      // Auto-restart if we still want the mic on
+      // (browsers stop recognition after a few seconds of silence)
+      if (shouldListenRef.current) {
+        try {
+          recognition.start();
+        } catch {
+          // Already restarting — ignore
+        }
+      }
+    };
+
+    return recognition;
+  };
+
+  useEffect(() => {
+    const rec = buildRecognition();
+    if (!rec) {
+      console.warn("SpeechRecognition not supported in this browser.");
+    }
+    recognitionRef.current = rec;
+
+    return () => {
+      shouldListenRef.current = false;
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startMic = () => {
-    if(recognitionRef.current && !isAIPlaying) {
-      try{
+    if (!recognitionRef.current || isAIPlaying) return;
+    shouldListenRef.current = true;
+    if (!isRecognizingRef.current) {
+      try {
         recognitionRef.current.start();
-      }catch{}
+      } catch {
+        // Already started — safe to ignore
+      }
     }
   };
 
   const stopMic = () => {
-    if(recognitionRef.current){
-      recognitionRef.current.stop();
+    shouldListenRef.current = false;
+    setInterimTranscript("");
+    if (recognitionRef.current && isRecognizingRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
     }
   };
 
@@ -276,9 +356,9 @@ function Step2Interview({interviewData, onFinish}) {
 
   useEffect(() =>{
     return () => {
+      shouldListenRef.current = false;
       if(recognitionRef.current){
-        recognitionRef.current.stop();
-        recognitionRef.current.abort();
+        try { recognitionRef.current.abort(); } catch {}
       }
       window.speechSynthesis.cancel();
     };
@@ -351,17 +431,34 @@ function Step2Interview({interviewData, onFinish}) {
             </div>
             
           </div>)}
-          <textarea 
-            placeholder='Type your answer here...'
-            onChange={(e) => setAnswer(e.target.value)}
-            value={answer}
-            className='flex-1 bg-gray-100 p-4 sm:p-6 rounded-2xl resize-none outline-none border border-gray-200 focus:ring-2 focus:ring-emerald-500 transition text-gray-800'>
-          </textarea>
+          {/* Answer textarea — shows confirmed text + live interim preview */}
+          <div className='flex-1 relative'>
+            <textarea 
+              placeholder='Your spoken answer will appear here automatically. You can also type directly...'
+              onChange={(e) => {
+                // When user types manually, strip any interim suffix and store clean value
+                const cleaned = e.target.value.endsWith(interimTranscript)
+                  ? e.target.value.slice(0, e.target.value.length - interimTranscript.length).trimEnd()
+                  : e.target.value;
+                setAnswer(cleaned);
+              }}
+              value={answer + (interimTranscript ? (answer ? " " : "") + interimTranscript : "")}
+              className='w-full h-full bg-gray-100 p-4 sm:p-6 rounded-2xl resize-none outline-none border border-gray-200 focus:ring-2 focus:ring-emerald-500 transition text-gray-800 min-h-[160px]'>
+            </textarea>
+            {/* Live listening indicator */}
+            {isMicOn && !isAIPlaying && (
+              <div className='absolute bottom-3 right-3 flex items-center gap-1.5 bg-emerald-100 text-emerald-700 text-xs font-medium px-2.5 py-1 rounded-full pointer-events-none'>
+                <span className='w-2 h-2 rounded-full bg-emerald-500 animate-pulse'></span>
+                Listening…
+              </div>
+            )}
+          </div>
           { !feedback ? (<div className='flex flex-center gap-4 mt-6'>
             <motion.button
             onClick={toggleMic}
             whileTap={{ scale:0.9 }}
-            className='w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black text-white shadow-lg'
+            title={isMicOn ? "Mute microphone" : "Unmute microphone"}
+            className={`w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full shadow-lg transition-colors ${isMicOn ? 'bg-emerald-600 text-white ring-2 ring-emerald-300' : 'bg-gray-700 text-white'}`}
             >
               { isMicOn ? <FaMicrophone size={20}></FaMicrophone> : <FaMicrophoneSlash size={20}></FaMicrophoneSlash> }
             </motion.button>
