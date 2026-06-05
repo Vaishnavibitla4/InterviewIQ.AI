@@ -1,4 +1,4 @@
-import { use, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import maleVideo from "../assets/videos/male-ai.mp4"
 import femaleVideo from "../assets/videos/female-ai.mp4"
 import Timer from './Timer'
@@ -14,6 +14,8 @@ function Step2Interview({interviewData, onFinish}) {
   const {interviewId, questions, userName} = interviewData;
   const [isIntroPhase, setIsIntroPhase] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
+  // ✅ FIX 1: Mirror isMicOn in a ref so async callbacks always read the latest value
+  const isMicOnRef = useRef(true);
   const recognitionRef = useRef(null);
   const [isAIPlaying, setIsAIPlaying] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -105,7 +107,8 @@ function Step2Interview({interviewData, onFinish}) {
           videoRef.current.currentTime = 0;
           setIsAIPlaying(false);
 
-          if(isMicOn) {
+          // ✅ FIX 2: Read from ref instead of stale state closure
+          if(isMicOnRef.current) {
             startMic();
           }
 
@@ -145,7 +148,8 @@ function Step2Interview({interviewData, onFinish}) {
 
         await speakText(currentQuestion.question);
 
-        if (isMicOn) {
+        // ✅ FIX 3: Read from ref for consistency
+        if (isMicOnRef.current) {
           startMic();
         }
       }
@@ -227,6 +231,7 @@ function Step2Interview({interviewData, onFinish}) {
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         console.error("Microphone permission denied:", event.error);
         setIsMicOn(false);
+        isMicOnRef.current = false; // ✅ FIX 4: Keep ref in sync on permission denial
         shouldListenRef.current = false;
       }
       isRecognizingRef.current = false;
@@ -288,12 +293,14 @@ function Step2Interview({interviewData, onFinish}) {
   };
 
   const toggleMic = () => {
-    if(isMicOn) {
+    const next = !isMicOn;
+    isMicOnRef.current = next; // ✅ FIX 5: Update ref before calling startMic/stopMic
+    if (isMicOn) {
       stopMic();
     } else {
       startMic();
     }
-    setIsMicOn(!isMicOn);
+    setIsMicOn(next);
   };
 
   const submitAnswer = async () => {
@@ -330,13 +337,14 @@ function Step2Interview({interviewData, onFinish}) {
 
     setCurrentIndex(currentIndex + 1);
     setTimeout(() => {
-      if(isMicOn) startMic();
+      if(isMicOnRef.current) startMic(); // ✅ FIX 6: Use ref here too
     }, 500);
   }
 
   const finishInterview = async (params) => {
     stopMic()
     setIsMicOn(false)
+    isMicOnRef.current = false; // ✅ Keep ref in sync
     try{
       const result = await axios.post(ServerUrl + "/api/interview/finish", {interviewId}, {withCredentials:true})
       console.log(result.data)
