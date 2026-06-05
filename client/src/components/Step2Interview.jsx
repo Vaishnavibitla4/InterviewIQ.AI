@@ -439,23 +439,23 @@ function Step2Interview({interviewData, onFinish}) {
             </div>
             
           </div>)}
-          {/* Answer textarea — shows confirmed text + live interim preview */}
-          <div className='flex-1 relative'>
+          {/* Answer textarea — free typing + voice input side by side */}
+          <div className='flex-1 flex flex-col gap-2'>
             <textarea 
               placeholder='Your spoken answer will appear here automatically. You can also type directly...'
-              onChange={(e) => {
-                // When user types manually, strip any interim suffix and store clean value
-                const cleaned = e.target.value.endsWith(interimTranscript)
-                  ? e.target.value.slice(0, e.target.value.length - interimTranscript.length).trimEnd()
-                  : e.target.value;
-                setAnswer(cleaned);
-              }}
-              value={answer + (interimTranscript ? (answer ? " " : "") + interimTranscript : "")}
-              className='w-full h-full bg-gray-100 p-4 sm:p-6 rounded-2xl resize-none outline-none border border-gray-200 focus:ring-2 focus:ring-emerald-500 transition text-gray-800 min-h-[160px]'>
+              onChange={(e) => setAnswer(e.target.value)}
+              value={answer}
+              className='w-full flex-1 bg-gray-100 p-4 sm:p-6 rounded-2xl resize-none outline-none border border-gray-200 focus:ring-2 focus:ring-emerald-500 transition text-gray-800 min-h-[160px]'>
             </textarea>
+            {/* Interim voice preview shown below textarea, not mixed into value */}
+            {interimTranscript && (
+              <div className='bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2 text-sm text-emerald-700 italic'>
+                <span className='font-semibold not-italic'>Hearing: </span>{interimTranscript}
+              </div>
+            )}
             {/* Live listening indicator */}
             {isMicOn && !isAIPlaying && (
-              <div className='absolute bottom-3 right-3 flex items-center gap-1.5 bg-emerald-100 text-emerald-700 text-xs font-medium px-2.5 py-1 rounded-full pointer-events-none'>
+              <div className='flex items-center gap-1.5 text-emerald-700 text-xs font-medium'>
                 <span className='w-2 h-2 rounded-full bg-emerald-500 animate-pulse'></span>
                 Listening…
               </div>
